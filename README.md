@@ -1,2 +1,3 @@
-# CS-SYSU
+# CS（double duck university
+）
  
