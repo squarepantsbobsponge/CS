@@ -1,3 +1,3 @@
-# CS（double duck university
-）
+# CS-double duck university
+
  
