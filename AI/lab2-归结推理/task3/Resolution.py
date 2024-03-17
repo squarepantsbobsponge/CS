@@ -18,8 +18,16 @@ def cluase_MGU(clause:tuple,arr:tuple)->list:
     arr_dict={}                                                                # arr_dict:用于存储合一后的映射置换关系
     #由于MGU_real算法的实现传入的是原子公式：
     #clause是单子句（直接提取出原子公式），arr子句可能有多个原子公式（遍历提取）
-    for i in range(0,len(arr)):                                                 
-       arr_dict.update(MGU.MGU_real(clause[0],arr[i]))                       # arr_dict每循环一次update一次，因为一次单步归结和单步的最一般合一化都是针对子句，则映射置换应该普及共享到每个子句
+    for i in range(0,len(clause)):
+        flag=0
+        for j in range(0,len(arr)):         
+            tm_dict=MGU.MGU_real(clause[i],arr[j])                                        
+            arr_dict.update(tm_dict)                    # arr_dict每循环一次update一次，因为一次单步归结和单步的最一般合一化都是针对子句，则映射置换应该普及共享到每个子句
+            if(len(tm_dict)!=0):
+                flag=1
+                break
+        if flag==1:
+            break
     ans=[]                                                                     # ans：list，装载一次单步合一后的置换和置换后的子句
     clause_ans=list(clause)                                                    # 转换为list便于修改
     arr_ans=list(arr)
