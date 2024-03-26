@@ -23,7 +23,7 @@ def cluase_MGU(clause:tuple,arr:tuple)->list:
         for j in range(0,len(arr)):         
             tm_dict=MGU.MGU_real(clause[i],arr[j])                                        
             arr_dict.update(tm_dict)                    # arr_dict每循环一次update一次，因为一次单步归结和单步的最一般合一化都是针对子句，则映射置换应该普及共享到每个子句
-            if(len(tm_dict)!=0):
+            if(len(tm_dict)!=0):                        # 一次只用合一一个变量，如果合一多个会导致略掉一些情况，但是合一一个会保证所有情况考虑
                 flag=1
                 break
         if flag==1:
@@ -46,7 +46,12 @@ def cluase_MGU(clause:tuple,arr:tuple)->list:
 def ResolutionOL(clause_set1:set):
     i=0
     flag=0                                                                   # flag：标记到时候单子句和后面的子句匹配结果（1：有有匹配成功的 2：匹配成功并且获得空子句）
-    clause_set=[x for x in clause_set1]                                      # clause_set:将传入子句集的格式改造成list，利于后面操作,存在问题？？不是每次转换的顺序都一样一一对应
+    #clause_set=[x for x in clause_set1]                                      # clause_set:将传入子句集的格式改造成list，利于后面操作,存在问题？？不是每次转换的顺序都一样一一对应
+    clause_set = []
+    for item in clause_set1:
+        clause_set.append(item)
+    #clause_set = sorted(clause_set, key=lambda x: len(x))
+
     ans=[]                                                                   # ans：用于存储步骤的list
     #先把子句集按序号存起来
     stored_my(ans,clause_set)                                                  
