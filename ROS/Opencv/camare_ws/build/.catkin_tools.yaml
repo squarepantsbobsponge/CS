@@ -1,0 +1,6 @@
+devel_space: /home/rosnoetic/camare_ws/devel
+install: false
+install_space: /home/rosnoetic/camare_ws/install
+profile: default
+source_space: /home/rosnoetic/camare_ws/src
+workspace: /home/rosnoetic/camare_ws

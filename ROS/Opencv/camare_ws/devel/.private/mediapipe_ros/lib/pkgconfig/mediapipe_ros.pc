@@ -1,0 +1,8 @@
+prefix=/home/rosnoetic/camare_ws/devel/.private/mediapipe_ros
+
+Name: mediapipe_ros
+Description: Description of mediapipe_ros
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

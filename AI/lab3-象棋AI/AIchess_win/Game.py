@@ -53,13 +53,14 @@ class Game(object):
 
     def __init__(self, screen, chessboard):
         self.screen = screen
-        self.player = "r"  # 默认走棋的为红方r
+        self.player = "b"  # 默认走棋的为红方r #将先走棋的设置为b方
+        self.start_player="b"
         self.player_tips_r_image = pygame.image.load("images/red.png")
         self.player_tips_r_image_topleft = (550, 500)
         self.player_tips_b_image = pygame.image.load("images/black.png")
         self.player_tips_b_image_topleft = (550, 100)
         self.show_attack = False
-        self.attack_player = 'r'
+        self.attack_player = 'b'
         self.show_attack_count = 0
         self.show_attack_time = 100
         self.attack_img = pygame.image.load("images/pk.png")
@@ -99,8 +100,13 @@ class Game(object):
         self.chessboard.create_chess()
         self.back_button.history_map = list()
         self.back_button.add_history(self.chessboard.get_chessboard_str_map())
-        # 设置走棋方为红方
-        self.player = 'r'
+        # 设置走棋方为黑方
+        if(self.start_player=="b"):
+            self.player="r"
+            self.start_player="r"
+        else:
+            self.player="b"
+            self.start_player="b"
 
     def show(self):
         # 如果一方获胜，那么显示"赢"
@@ -109,8 +115,8 @@ class Game(object):
             self.show_win_count += 1
             if self.show_win_count == self.show_win_time:
                 self.show_win_count = 0
-                # self.show_win = False
-                # self.reset_game()  # 游戏玩过一局之后，重置游戏
+                self.show_win = False
+                self.reset_game()  # 游戏玩过一局之后，重置游戏
 
         if self.show_win:
             if self.win_player == "b":
@@ -123,8 +129,8 @@ class Game(object):
             self.show_draw_count += 1
             if self.show_draw_count == self.show_draw_time:
                 self.show_draw_count = 0
-                # self.show_draw = False
-                # self.reset_game()  # 游戏玩过一局之后，重置游戏
+                self.show_draw = False
+                self.reset_game()  # 游戏玩过一局之后，重置游戏
         if self.show_draw:
             self.screen.blit(self.draw_img, (550, 275))
             return

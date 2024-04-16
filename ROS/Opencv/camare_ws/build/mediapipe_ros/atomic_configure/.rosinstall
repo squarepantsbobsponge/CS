@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/rosnoetic/camare_ws/devel/.private/mediapipe_ros/setup.sh

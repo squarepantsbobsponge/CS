@@ -1,0 +1,5 @@
+mediapipe_ros
+/home/rosnoetic/camare_ws/devel/.private/mediapipe_ros/cmake.lock /home/rosnoetic/camare_ws/devel/./cmake.lock
+/home/rosnoetic/camare_ws/devel/.private/mediapipe_ros/share/mediapipe_ros/cmake/mediapipe_rosConfig.cmake /home/rosnoetic/camare_ws/devel/share/mediapipe_ros/cmake/mediapipe_rosConfig.cmake
+/home/rosnoetic/camare_ws/devel/.private/mediapipe_ros/share/mediapipe_ros/cmake/mediapipe_rosConfig-version.cmake /home/rosnoetic/camare_ws/devel/share/mediapipe_ros/cmake/mediapipe_rosConfig-version.cmake
+/home/rosnoetic/camare_ws/devel/.private/mediapipe_ros/lib/pkgconfig/mediapipe_ros.pc /home/rosnoetic/camare_ws/devel/lib/pkgconfig/mediapipe_ros.pc

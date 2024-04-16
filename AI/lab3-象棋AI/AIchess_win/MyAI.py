@@ -144,14 +144,14 @@ class ChessAI(object):
         # for item in chessboard.chessboard_map:
         #     print(item)
         #要判断是否为最终状态和棋或者输赢#要返回什么直接返回当前状态
-        if step==3:
+        if step==4:
             return  self.evaluate_class.evaluate(chessboard)
         #给v赋值，极大
         v=float('inf')
         chess_list=chessboard.get_chess()
         #得到棋盘里面的所有棋子对象，但是只要自己队伍的
         for chess in chess_list:
-             if chess!=None and chess.team==self.team:
+             if chess!=None and chess.team!=self.team: #是预测对方
                 #得到可以下的位置列表
                 put_down=chessboard.get_put_down_position(chess)
                 #要深度copy一个类对象传下去，不能在原对象的基础上改变
@@ -160,30 +160,32 @@ class ChessAI(object):
                 cur_row=chess.row
                 cur_col=chess.col
                 for next_row,next_col in put_down:
-                    chess.row=next_row
-                    chess.col=next_col
+                    # chess.row=next_row
+                    # chess.col=next_col
                     chess_tm=chessboard.chessboard_map[next_row][next_col]#保存对方状态
                     #要更新到chess-boardmap中，先是在list中更新了，但是没有通知get_put_down_position里面的board_map
                     #不能用那个map类，无法深度copy渲染的类型
+                    chessboard.chessboard_map[next_row][next_col]=chessboard.chessboard_map[cur_row][cur_col]     #这里用chess会不会出问题
+                    chessboard.chessboard_map[next_row][next_col].update_position(next_row, next_col)
                     chessboard.chessboard_map[cur_row][cur_col]=None
-                    chessboard.chessboard_map[next_row][next_col]=chess
-                   
                     v=min(v,self.Max_Value(chessboard,alpha,beta,step+1))
                     #恢复
-                    chess.row=cur_row
-                    chess.col=cur_col
-                    chessboard.chessboard_map[cur_row][cur_col]=chess
+                    # chess.row=cur_row
+                    # chess.col=cur_col
+                    chessboard.chessboard_map[cur_row][cur_col]=chessboard.chessboard_map[next_row][next_col]
+                    chessboard.chessboard_map[cur_row][cur_col].update_position(cur_row, cur_col)
                     chessboard.chessboard_map[next_row][next_col]=chess_tm
-                    #判断是否剪枝
-                    if v<=alpha: return v
-                    #更新alpha值
                     beta=min(beta,v)
-        return v
+                    #判断是否剪枝
+                    if beta<=alpha: return beta
+                    #更新alpha值
+                    
+        return beta
     
     #alpha剪枝#返回的是当下这一步的下一步能得到的最大价值#而且要更新aplha，beta值，返回v就是在更新了
     def Max_Value(self,chessboard:ChessBoard,alpha,beta,step):
         #要判断是否为最终状态和棋或者输赢#要返回什么直接返回当前状态
-        if step==3:
+        if step==4:
             return  self.evaluate_class.evaluate(chessboard)
         #给v赋值，极小
         v=float('-inf')
@@ -198,17 +200,19 @@ class ChessAI(object):
                 cur_row=chess.row
                 cur_col=chess.col
                 for next_row,next_col in put_down:
-                    chess.row=next_row
-                    chess.col=next_col
+                    # chess.row=next_row
+                    # chess.col=next_col
                     chess_tm=chessboard.chessboard_map[next_row][next_col]#保存对方状态
                     #要更新到chess-boardmap中，先是在list中更新了，但是没有通知get_put_down_position里面的board_map
+                    chessboard.chessboard_map[next_row][next_col]=chessboard.chessboard_map[cur_row][cur_col] 
+                    chessboard.chessboard_map[next_row][next_col].update_position(next_row, next_col)
                     chessboard.chessboard_map[cur_row][cur_col]=None
-                    chessboard.chessboard_map[next_row][next_col]=chess
                     v=max(v,self.Min_Value(chessboard,alpha,beta,step+1))
                     #恢复
-                    chess.row=cur_row
-                    chess.col=cur_col                    
-                    chessboard.chessboard_map[cur_row][cur_col]=chess
+                    # chess.row=cur_row
+                    # chess.col=cur_col                    
+                    chessboard.chessboard_map[cur_row][cur_col]= chessboard.chessboard_map[next_row][next_col]
+                    chessboard.chessboard_map[cur_row][cur_col].update_position(cur_row, cur_col)
                     chessboard.chessboard_map[next_row][next_col]=chess_tm  #不用改对方棋子的数据，直接恢复
                     #判断是否剪枝
                     if step==0 and v>alpha:
@@ -217,10 +221,10 @@ class ChessAI(object):
                         self.new_row=next_row
                         self.new_col=next_col
                     alpha=max(alpha,v)
-                    if v>=beta: return v
+                    if alpha>=beta: return alpha
                     #更新alpha值
                     
-        return v
+        return alpha
     
     def get_next_step(self, chessboard: ChessBoard):    #aplha beta剪枝
         #得到返回一个元组# cur_row, cur_col, nxt_row, nxt_col

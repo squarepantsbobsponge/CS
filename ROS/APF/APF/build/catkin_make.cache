@@ -1,0 +1,2 @@
+
+-DCATKIN_DEVEL_PREFIX=/home/rosnoetic/APF/devel -DCMAKE_INSTALL_PREFIX=/home/rosnoetic/APF/install -G Unix Makefiles
