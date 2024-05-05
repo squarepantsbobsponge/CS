@@ -2,7 +2,9 @@
 #include<stdio.h>
 #include<pthread.h>
 void *hello(void* arg) {
-  printf("%s\n", (char*)arg);
+ printf("%s\n", (char*)arg);//会竞争
+ //printf("hello");
+  sleep(1000);
   return NULL;
 }
 int main(){

@@ -7,6 +7,7 @@ void *hello(void* arg) {
 
 int main() {
   pthread_t tid;
+  
   pthread_create(&tid, NULL, hello,(void*) "hello world");
   pthread_join(tid, NULL);
   return 0;

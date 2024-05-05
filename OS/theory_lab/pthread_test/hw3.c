@@ -60,7 +60,7 @@ int main(int argc,char* argv[]){
          pthread_t tid3;
      pthread_create(&tid3, NULL, min_my,(void* )data);
          pthread_join(tid,NULL);
-            pthread_join(tid2,NULL);
+        pthread_join(tid2,NULL);
         pthread_join(tid3,NULL);
     printf("average=%d\n",aver);
     printf("min=%d\n",min);
