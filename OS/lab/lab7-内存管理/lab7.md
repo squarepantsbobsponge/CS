@@ -16,6 +16,245 @@
 
 [TOC]
 
+# Assignment1
+
+## 1.实验要求
+
+复现参考代码，实现二级分页机制，并能够在虚拟机地址空间中进行内存管理，包括内存的申请和释放等，截图并给出过程解释。
+
+## 2.实验过程
+
+1.实现位图
+
+2.实现地址池
+
+3.初始化页表，开启二级页表机制
+
+## 3.关键代码
+
+**3.1实现位图**：
+
+* 作用：用一个bit记录一个分区的分配情况，0为未分配，1为已分配，在分页机制中就是记录每一页的分配情况，便于开启分页机制后管理页的分配和释放
+
+* 数据结构：
+
+  <code>char* bitmap</code>: 一块记录分区分配情况的空间，注意由于是1bit记录一个分区，则操作精度要到每个bit上
+
+* 主要函数：
+
+  <code> int allocate(const int count)</code>: 遍历<code>bitmap</code>，查找连续的count个未被分配的分区，并将其分配
+
+  <code> void release(const int index, const int count);</code>: 释放第index个分区开始的count个跟去
+
+* 注意：单纯的位图实现中并没有说明每个资源的含义和大小，只是将资源做离散化管理，具体地对资源管理的一些定义仍需进一步设置定义
+
+```c++
+class BitMap
+{
+public:
+    // 被管理的资源个数，bitmap的总位数
+    int length;
+    // bitmap的起始地址
+    char *bitmap;
+public:
+    // 初始化
+    BitMap();
+    // 设置BitMap，bitmap=起始地址，length=总位数(即被管理的资源个数)
+    void initialize(char *bitmap, const int length);
+    // 获取第index个资源的状态，true=allocated，false=free
+    bool get(const int index) const;
+    // 设置第index个资源的状态，true=allocated，false=free
+    void set(const int index, const bool status);
+    // 分配count个连续的资源，若没有则返回-1，否则返回分配的第1个资源单元序号
+    int allocate(const int count);
+    // 释放第index个资源开始的count个资源
+    void release(const int index, const int count);
+    // 返回Bitmap存储区域
+    char *getBitmap();
+    // 返回Bitmap的大小
+    int size() const;
+private:
+    // 禁止Bitmap之间的赋值
+    BitMap(const BitMap &) {}
+    void operator=(const BitMap&) {}
+};
+```
+
+**3.2地址池实现**
+
+* 作用：在位图的基础上进一步申明管理的资源的含义和大小，管理的资源是内存且管理粒度为一页4kb
+
+* 数据结构：
+
+  <code>Bitmap resources</code>: 标识内存中划分出每一页的分配情况
+
+  <code>int startAddress</code>: 记录地址池管理的页的共同起始地址。（索引地址池第i页的起始地址：address=startAddress+i×PAGESIZE）
+
+* 主要函数：
+
+  <code> int allocate(const int count)</code>:  在地址池中分配count页内存，通过位图<code>resources</code>的分配函数返回连续count个空闲页开头索引<code>start</code>，再根据<code>startAddress</code>和<code>start</code>计算被分配的空闲页的开头地址
+
+  <code> int allocate(const int count);</code> 释放开始地址为address的amount页。先根据pagesize，address，startAddress计算出释放页在位图中的索引<code>index</code>,再通过位图<code>resources</code>的释放函数将这些页的状态都置为未分配。
+
+  ```c++
+   class AddressPool
+  {
+  public:
+      BitMap resources;
+      int startAddress;
+  
+  public:
+      AddressPool();
+      // 初始化地址池
+      void initialize(char *bitmap, const int length, const int startAddress);
+      // 从地址池中分配count个连续页，成功则返回第一个页的地址，失败则返回-1
+      int allocate(const int count);
+      // 释放若干页的空间
+      void release(const int address, const int amount);
+  };
+  ```
+
+**3.3 物理内存的实现**：
+
+* 作用：地址池实现对整个物理内存划分为页，需要进一步划分用户空间和内核空间
+
+* 数据结构:
+
+  <code>AddressPool kernelPhysical;</code>内核地址池
+
+  <code> AddressPool userPhysical;</code> 物理地址池
+
+* 主要函数:
+
+  <code>void initialize();</code>: 留出给内核的0x100000,再预留出1MB（256个4kb页）给内核页目录表和页表，剩下的物理内存内核和用户地址池平分，同时指定内核和物理位图的位置起始0x10000。根据计算出的内存和用户地址池的开始地址和大小以及定义好的位图位置初始化<code> kernelPhysical</code>,<code>userPhysical</code>.
+
+  <code>int allocatePhysicalPages(enum AddressPoolType type, const int count)</code>:根据指定类型去指定地址池调用地址池分配函数分配count页，并且返回页的开始物理地址
+
+  <code>void releasePhysicalPages(enum AddressPoolType type, const int paddr, const int count)</code>: 根据指定的类型去指定地址池调用释放函数，释放起始地址为<code>paddr</code>的<code>count</code>页
+
+```c++
+class MemoryManager
+{
+public:
+    // 可管理的内存容量
+    int totalMemory;
+    // 内核物理地址池
+    AddressPool kernelPhysical;
+    // 用户物理地址池
+    AddressPool userPhysical;
+public:
+    MemoryManager();
+    // 初始化地址池
+    void initialize();
+    // 从type类型的物理地址池中分配count个连续的页
+    // 成功，返回起始地址；失败，返回0
+    int allocatePhysicalPages(enum AddressPoolType type, const int count);
+    // 释放从paddr开始的count个物理页
+    void releasePhysicalPages(enum AddressPoolType type, const int paddr, const int count);
+    // 获取内存总容量
+    int getTotalMemory();
+};
+```
+
+**3.4开启二级分页机制**：
+
+* 作用：
+
+  ![image-20240524173804859](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240524173804859.png)
+
+* 步骤：
+  
+
+   1.初始化内核页表和页目录表：
+
+* 目前物理内存的使用情况：只有内核在使用而且不超过1MB，所以要为1MB内存做好页表和页目录的映射
+* 页目录初始化：前1MB的高10位始终为0，则需要初始化第0个页目录项，将其映射到内核第一个页表的起始地址。页目录表实际上也是一个页表，也要能通过页目录表寻找，所以将页目录表的最后一项映射为页目录表的地址
+* 内核第一个页表初始化：前1mb的中间10位只有后8位有值，1mb/4kb=256页，所以需要初始化256个页表项，且定义0-1MB是恒等映射
+
+​    2.将页目录表的地址写入cr3，让MMU能找到页目录表，自动将CPU生成的逻辑地址转化为物理地址
+
+​    3.将cr0的PG位置1，开启分页机制
+
+  ```c++
+  void MemoryManager::openPageMechanism()
+  {
+      // 页目录表指针
+      int *directory = (int *)PAGE_DIRECTORY;  //放到0x100000的位置（十六进制也就是在1MB位置处）
+      //线性地址0~4MB对应的页表
+      int *page = (int *)(PAGE_DIRECTORY + PAGE_SIZE);//之前预留出了2^8*4KB=1MB的位置，前面4KB代表页目录指针，其他都是代表页表
+      // 初始化页目录表
+      memset(directory, 0, PAGE_SIZE);
+      // 初始化线性地址0~4MB对应的页表
+      memset(page, 0, PAGE_SIZE);//一个页表可以表示4MB的虚拟内存，现在这个页表要映射内存中前4MB包括预留给内核的1MB的物理内存
+      int address = 0;
+      // 将线性地址0~1MB恒等映射到物理地址0~1MB（预留给内核的1MB的位置是虚拟地址和物理地址相同）1MB/4KB=2^8个页
+      //前1MB 二进制：|00100 00000|00000 00000 00   中间10位只有后8位有值，所以需要初始化2^8=256个表项
+      //初始化页表
+      for (int i = 0; i < 256; ++i)
+      {
+          // U/S = 1, R/W = 1, P = 1
+          page[i] = address | 0x7;//信息位的初始化
+          address += PAGE_SIZE;//加载高20位的页基地址，由于是4KB的倍数，所以只关心高20位
+      }
+      // 初始化页目录项
+      //前1MB的高10位始终是000，则页目录项只要初始化第0项
+      // 0~1MB
+      directory[0] = ((int)page) | 0x07;
+      // 3GB的内核空间
+      directory[768] = directory[0];
+      // 最后一个页目录项指向页目录表
+      directory[1023] = ((int)directory) | 0x7;
+  
+      // 初始化cr3，cr0，开启分页机制
+      asm_init_page_reg(directory);
+  
+      printf("open page mechanism\n");
+      
+  }
+  
+  ```
+
+ 
+
+```assembly
+asm_init_page_reg:
+    push ebp  
+    mov ebp, esp
+    push eax
+    mov eax, [ebp + 4 * 2]
+    mov cr3, eax ; 放入页目录表地址
+    mov eax, cr0
+    or eax, 0x80000000 ;31位变成1
+    mov cr0, eax           ; 置PG=1，开启分页机制
+    pop eax
+    pop ebp
+    ret
+```
+
+
+
+## 4.实验结果
+
+成功分配和释放内存
+
+```c++
+    int p1=memoryManager.allocatePhysicalPages(AddressPoolType::KERNEL,3);
+    printf("allocate 3 pages,address:%x\n",p1);
+    int p2=p1+PAGE_SIZE;
+    memoryManager.releasePhysicalPages(AddressPoolType::KERNEL,p2, 1);
+    printf("release a page,address:%x\n",p2);
+    int p3=memoryManager.allocatePhysicalPages(AddressPoolType::KERNEL,1);
+    printf("allocate a pages,address:%x\n",p3);
+```
+
+![image-20240524182909779](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240524182909779.png)
+
+## 5.总结
+
+开启分页机制后物理内存图解：
+
+![image-20240524182305328](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240524182305328.png)
+
 # Assignment2
 
 ## 1.实验要求：
