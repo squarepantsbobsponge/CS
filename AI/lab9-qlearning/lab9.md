@@ -25,3 +25,13 @@
 与Q_learning的区别所在：Q值更新策略不同
 
 ![image-20240521180245682](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240521180245682.png)
+
+
+
+![image-20240526123834953](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240526123834953.png)
+
+问题：总是在几个状态处来回切换，q_table始终为0000
+
+问题：其他格子都是0奖励，趋利避害肯定来来回回在安全状态切换
+
+改进：加了回溯惩罚，用欧几里得距离修改了奖励值，使它尽力趋近那个真实奖励值为1的黄点

@@ -18,11 +18,11 @@
 
 # Assignment1
 
-## 1.实验要求
+## 1.实验要求：
 
 复现参考代码，实现二级分页机制，并能够在虚拟机地址空间中进行内存管理，包括内存的申请和释放等，截图并给出过程解释。
 
-## 2.实验过程
+## 2.实验过程：
 
 1.实现位图
 
@@ -30,7 +30,7 @@
 
 3.初始化页表，开启二级页表机制
 
-## 3.关键代码
+## 3.关键代码：
 
 **3.1实现位图**：
 
@@ -233,7 +233,7 @@ asm_init_page_reg:
 
 
 
-## 4.实验结果
+## 4.实验结果：
 
 成功分配和释放内存
 
@@ -681,3 +681,304 @@ void MemoryManager::releasePages_FIFO(enum AddressPoolType type, const int virtu
    改进：把虚拟页的页数设置的比物理页大
 
    ![image-20240524103105174](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240524103105174.png)
+
+# Assignment4
+
+## 1.实验要求：
+
+* 结合代码分析虚拟页内存分配的三步过程和虚拟页内存释放。
+* 构造测试例子来分析虚拟页内存管理的实现是否存在bug。如果存在，则尝试修复并再次测试。否则，结合测例简要分析虚拟页内存管理的实现的正确性。
+
+## 2.实验过程:
+
+（只是对内核管理的）
+
+1.虚拟内存管理的初始化
+
+2.虚拟内存页分配
+
+3.虚拟内存页释放
+
+## 3.关键代码:
+
+**3.1虚拟内存管理的初始化**
+
+* 实现：建立内核的虚拟地址池（初始化：大小和内核的物理地址池一样大，起始地址为0xC0100000）
+
+* 为什么起始地址为0xC100000?
+
+  将内核虚拟地址空间映射到用户虚拟地址空间3GB到4GB（用户进程通信的共享公共区域，由于需要告知内核，所以也需要在内核虚拟地址中映射）。为了所有进程都能共享到内核分配的页内存，则内核虚拟空间起始地址不是从0x100000开始，而是要同样提高到3GB到4GB的范围内。则开始地址为0xC0100000
+
+* 注意：由于内核的地址映射是直接映射的，那么3GB-4GB的虚拟地址空间在页目录表中涵盖第768-第1023个页目录项（一个页目录项能涵盖4MB的虚拟空间映射$3*2^{30}/2^{22}=3*2^8=768$）。一共256个页目录项：前255个页目录项映射255个页表（和页目录表中0-255的页目录项映射的内容一致（和内核真正的虚拟地址对应）），第256个页目录项映射页目录表（页目录表也是一个页表）
+
+* 图解：
+
+  ![image-20240527113011614](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240527113011614.png)
+
+```c++
+    kernelVirtual.initialize(
+        (char *)kernelVirtualBitMapStart,
+        kernelPages,
+        KERNEL_VIRTUAL_START);
+```
+
+**3.2页内存分配**
+
+   注意开启分页机制后程序看到的是虚拟地址
+
+* 第一步：从虚拟地址池中分配若干连续的虚拟页
+
+  根据申请的空间类型，直接调用对应虚拟地址池的分配函数，返回分配到的虚拟地址
+
+  ```c++
+      // 第一步：从虚拟地址池中分配若干虚拟页
+      int virtualAddress = allocateVirtualPages(type, count);
+      if (!virtualAddress)
+      {
+          return 0;
+      }
+  int MemoryManager::allocateVirtualPages(enum AddressPoolType type, const int count)
+  {
+      int start = -1;
+  
+      if (type == AddressPoolType::KERNEL)
+      {//只实现了内核的
+          start = kernelVirtual.allocate(count);
+      }
+      //从虚拟内核地址池里面分配连续地址空间
+      return (start == -1) ? 0 : start;
+  }
+  ```
+
+* 第二步：为每一个虚拟页，从物理地址池分配1页
+
+  原理：虚拟地址连续的，对应的物理地址可以不连续，体现优点避免外部碎片
+
+  根据申请的空间类型，直接调用对应物理地址池的分配函数，返回分配到的物理地址
+
+  ```C++
+          flag = false;
+          // 第二步：从物理地址池中分配一个物理页//由于物理页是不连续的，所以可以一个一个分
+          physicalPageAddress = allocatePhysicalPages(type, 1);
+  int MemoryManager::allocatePhysicalPages(enum AddressPoolType type, const int count)
+  {
+      int start = -1;
+  
+      if (type == AddressPoolType::KERNEL)
+      {
+          start = kernelPhysical.allocate(count);
+      }
+      else if (type == AddressPoolType::USER)
+      {
+          start = userPhysical.allocate(count);
+      }
+  
+      return (start == -1) ? 0 : start;
+  }
+  ```
+
+* 第三步：为虚拟页建立页目录项和页表项，使虚拟页内的地址经过分页机制变换到物理页内
+
+  1.如果分配过程中有一个虚拟页分配物理页失败了，要释放掉前i个已经分配的物理页，申请分配内存失败
+
+```c++
+        if (physicalPageAddress)
+        {
+            // 第三步：为虚拟页建立页目录项和页表项，使虚拟页内的地址经过分页机制变换到物理页内。
+            flag = connectPhysicalVirtualPage(vaddress, physicalPageAddress);
+        }
+        else
+        {
+            flag = false;
+        }
+
+        // 分配失败，释放前面已经分配的虚拟页和物理页表
+        if (!flag)
+        {
+            // 前i个页表已经指定了物理页
+            releasePages(type, virtualAddress, i);
+            // 剩余的页表未指定物理页
+            releaseVirtualPages(type, virtualAddress + i * PAGE_SIZE, count - i);
+            return 0;
+        }
+```
+
+​	2.为虚拟页建立页目录项和页表项
+
+​	注意页表和页目录表都是4KB，所以它们的起始地址都是高二十位不为0，低十二位都为0
+
+​	（1）总：
+
+```c++
+bool MemoryManager::connectPhysicalVirtualPage(const int virtualAddress, const int physicalPageAddress)
+{
+    // 计算虚拟地址对应的页目录项和页表项
+    int *pde = (int *)toPDE(virtualAddress);
+    int *pte = (int *)toPTE(virtualAddress);
+    // 页目录项无对应的页表，先分配一个页表
+    if(!(*pde & 0x00000001)) //看页目录项的最后一个有效位是否有效
+    {
+        // 从内核物理地址空间中分配一个页表
+        int page = allocatePhysicalPages(AddressPoolType::KERNEL, 1);
+        if (!page)
+            return false;
+
+        // 使页目录项指向页表
+        *pde = page | 0x7;  //分了个页表，写入页目录
+        // 初始化页表
+        char *pagePtr = (char *)(((int)pte) & 0xfffff000);//取出页表项地址的高二十位也就是物理页表地址
+        memset(pagePtr, 0, PAGE_SIZE);
+    }
+    // 使页表项指向物理页
+    *pte = physicalPageAddress | 0x7;//在页表中建立
+
+    return true;
+}
+
+```
+
+​        （2）根据虚拟页的地址计算页目录项和页表项的虚拟地址：
+
+​	   注意：虚拟地址：高十位是对应页目录项在页目录表中的偏移，中十位是对应页表项在页表中的偏移，低十二位是在页内偏移
+
+​	   构造页目录项的虚拟地址：低十二位在页内的偏移：页目录项在页目录表内偏移；中十位：页表项在页表内的偏移: 指向页目录表的页目录项在页目录表内的偏移（指向页目录表的页目录项是第1023个页目录项）；高十位：页目录表项在页目录表中的偏移 : 指向页目录表的页目录项在页目录表中的偏移
+
+​	构造页表项的虚拟地址: 低十二位在页内偏移：页目录项在页表内偏移 ; 中十位：页表项在页表内的偏移：指向页表的页目录项在页目录中的偏移；高十位：页目录表项在页目录内的偏移：指向页目录表的页目录项在在页目录表中的偏移
+
+```C++
+int MemoryManager::toPDE(const int virtualAddress)//构造页目录项的虚拟的地址
+{
+    return (0xfffff000 + (((virtualAddress & 0xffc00000) >> 22) * 4));
+}//(virtualAddress & 0xffc00000)>> 22 提取出虚拟地址的高10位，并且娜到低10位，得到的是在页目录中的排序
+//*4说明这个对应的页目录项在页目录的偏移位置//
+//现在要构造的是对应页表项的虚拟地址（程序只能看虚拟地址），低12位为页内偏移（就是页目录项在页目录的偏移（页目录也是页表））
+//中10位为页在页表内的偏移，在这里就是表示指向页目录表的页表项在页表内的偏移，（页目录表页的映射在页目录表的最后一项），则为111
+//高10位为页表项的映射在页目录表的偏移位置，也是页目录的最后一项，也是1111111
+/
+int MemoryManager::toPTE(const int virtualAddress)//构造页表项的虚拟地址
+{
+    return (0xffc00000 + ((virtualAddress & 0xffc00000) >> 10) + (((virtualAddress & 0x003ff000) >> 12) * 4));
+}//把虚拟地址的中10位提取出来((virtualAddress & 0x003ff000) >> 12) * 4) 这个是虚拟地址在页表中的偏移（低10位），下面把页表项地址构造成虚拟地址
+//中10位为页表项在页表中的偏移，这里表示为对应页表在页目录表中的偏移，
+//高10位为页目录项在页目录中的偏移，这里表示为页目录表的映射项在页目录中的偏移 111111
+```
+
+**3.3页内存释放**
+
+总：先将虚拟页地址转为物理页地址到物理地址中释放，再将对应的页表项抹0，最后取虚拟地址池中释放虚拟页
+
+```C++
+void MemoryManager::releasePages(enum AddressPoolType type, const int virtualAddress, const int count)
+{
+    int vaddr = virtualAddress;
+    int *pte;
+    for (int i = 0; i < count; ++i, vaddr += PAGE_SIZE)
+    {
+        // 第一步，对每一个虚拟页，释放为其分配的物理页
+        releasePhysicalPages(type, vaddr2paddr(vaddr), 1);
+
+        // 设置页表项为不存在，防止释放后被再次使用
+        pte = (int *)toPTE(vaddr);
+        *pte = 0;
+    }
+
+    // 第二步，释放虚拟页
+    releaseVirtualPages(type, virtualAddress, count);
+}
+```
+
+虚拟地址到物理地址的转换：根据高十位到页目录表中找到页表项得到页表地址，根据中10位和页表地址到页表中找到页表项得到物理页地址，物理页地址加上低十二位页内偏移得到物理地址
+
+```c++
+int MemoryManager::vaddr2paddr(int vaddr)
+{
+    int *pte = (int *)toPTE(vaddr);
+    int page = (*pte) & 0xfffff000;
+    int offset = vaddr & 0xfff;
+    return (page + offset);
+}
+```
+
+## 4.实验结果:
+
+* 默认测试用例结果正常：
+
+
+```c++
+ char *p1 = (char *)memoryManager.allocatePages(AddressPoolType::KERNEL, 100);
+    printf("allocate 100 pages for p1,address:%x\n",p1 );
+    char *p2 = (char *)memoryManager.allocatePages(AddressPoolType::KERNEL, 10);
+    printf("allocate 10 pages for p2,address:%x\n",p2 );
+    char *p3 = (char *)memoryManager.allocatePages(AddressPoolType::KERNEL, 100);
+        printf("allocate 100 pages for p3,address:%x\n",p3 );
+
+    memoryManager.releasePages(AddressPoolType::KERNEL, (int)p2, 10);
+    printf("release 10 pages from p2\n");
+    p2 = (char *)memoryManager.allocatePages(AddressPoolType::KERNEL, 100);
+    printf("allocate 100 pages for p2,address:%x\n",p2 );
+    // printf("%x\n", p2);
+
+     p2 = (char *)memoryManager.allocatePages(AddressPoolType::KERNEL, 10);
+    printf("allocate 10 pages for p2,address:%x\n",p2 );
+```
+
+成功打印关于地址池的相关信息。为p1分配100页，起始地址即为定义的虚拟空间起始地址0xc0100000，终止地址为 0xc0164000(400kb是0x64000)；为p2分配10页起始地址为0xc0164000，终止地址为0xc016E000；为p3分配100页起始地址为0xc016E000，终止地址为0xc01D2000。
+
+释放p2再给它分配100页时，p1和p3之间的10页不够发配，只能在p3后面分配。
+
+再给p2分配10页时，分配的就是p1和p3之间空闲的10页
+
+![image-20240527151502105](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240527151502105.png)
+
+* bug：
+
+  设置：给bitmap的set函数中加了循环耗时
+
+  ```C++
+  void BitMap::set(const int index, const bool status)
+  {
+      //加个循环,耗时
+      int pos = index / 8;
+      int offset = index % 8;
+      int delay = 0xffffff;
+      while (delay)
+          --delay;
+      // 清0
+      bitmap[pos] = bitmap[pos] & (~(1 << offset));
+  
+      // 置1
+      if (status)
+      {
+          bitmap[pos] = bitmap[pos] | (1 << offset);
+      }
+  }
+  ```
+
+  触发bug：同时给两个线程分配100页
+
+  ```c++
+  void second_thread(void *arg)
+  {
+      char *p2 = (char *)memoryManager.allocatePages(AddressPoolType::KERNEL, 100);
+      printf("allocate 100 pages for p2,address:%x\n",p2);
+  }
+  
+  void first_thread(void *arg)
+  {
+       programManager.executeThread(second_thread, nullptr, "second thread", 2);
+      char *p1 = (char *)memoryManager.allocatePages(AddressPoolType::KERNEL, 100);
+      printf("allocate 100 pages for p1,address:%x\n",p1 );
+       asm_halt();
+  }
+  
+  ```
+
+  问题：两个线程分配到的地址虽然不同，但是根据计算，两个线程分配到的内核空间重叠：按照计算两个起始地址应该是0xc0100000和0xc0164000，但是会出现一个地址是0xc010A000.
+
+  ![image-20240601220850395](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240601220850395.png)
+
+  出现原因：由于寻找和分配空间的过程并不是原子的，而且进程调度是时间片调度。这可能出现在为某个进程分配空间中途切换了其他进程。其他进程打断了上一个进程的虚拟空间分配的连续性，造成它们分配到的虚拟空间是重叠的
+
+## 5.总结:
+
+问题：为什么内核的物理页不能完全分配，实际上可分配的比理论少
