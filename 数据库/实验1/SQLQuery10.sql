@@ -1,0 +1,2 @@
+use My_test
+DROP TABLE ORDERS

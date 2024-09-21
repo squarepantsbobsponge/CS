@@ -1,3 +1,7 @@
+[TOC]
+
+
+
 ## LLM
 
 #### 1. 微调Fine-Tuning
@@ -93,27 +97,88 @@ Fine-Tuning的基本思想是采用已经在大量文本上进行训练的预训
 
 ## LERAGING REINFORCEMENT LEARNING AND LARGE LANGUAGE MODELS FOR CODE OPTIMIZATION
 
-*  问题：利用大模型和强化学习辅助代码优化，但是训练数据集都是通用的，无法满足需求，或者没有利用好强化学习和环境的反馈交互
+*  问题：
+
+   *  LLM ----->  LLM+RL(增加与环境的反馈，使给定程序的功能正确性得到确认) ----->  PerfRL（快，小，正确）
+
+   *  利用大模型和强化学习辅助代码优化，但是训练数据集都是通用的，无法满足需求，或者没有利用好强化学习和环境的反馈交互
 
 *  挑战：
   1. 如何将测试的反馈用于LLM的训练
   2. 如何使小模型的性能和大模型的性能相似
   3. 如何使小模型能生成少错误的可靠代码和解决完成代码优化任务
 
+*  补充：
+
+   *  multi-turn program synthesis：在多轮程序合成中，系统通过与用户之间的多次对话来逐步细化和完善生成的程序。这种方法通常用于处理复杂的程序合成任务，其中程序的规模较大或者问题的描述不够清晰，需要更多的交互以便系统能够更好地理解用户的意图并生成符合要求的程序
+   *  PIE数据集：包含trajectories of programs（程序的轨迹？），程序从较低的版本优化成高级版本的过程  
+
+*  问题定义：
+
+   *  优化程序集X，使得给定相同输入，优化前后的输出相同
+   *  最大化cost：生成的候选优化程序<code>ybest</code>
+      ![image-20240905102758409](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240905102758409.png)
+      *  <code>perf(ybest)</code>：<code>ybest</code>相当于<code>x</code>在单元测试中的性能改进
+      *  <code>eq(R,ybest)</code>：给定input，生成序列和单元测试输出的匹配
+
+   *  最大化生成<code>ybest</code>的概率：
+      <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240905103343747.png" alt="image-20240905103343747" style="zoom: 67%;" />
+      *  $ \theta ^*$​是模型的最优参数合集
+
+   *  看待代码优化问题的角度：RL算法的复杂性、 LM的大小
+      以及所使用的数据集与代码优化任务的相关性  
+      <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240905104118647.png" alt="image-20240905104118647" style="zoom:67%;" />
+   *  问题：减少模型大小，保证生成代码的可靠性
+
 *  框架：
 
    *  大模型微调：
 
-      *  codeT5（自然语言混合编程语言的输入）
-      *  微调目标：最小化交叉熵损失![image-20240723163401014](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240723163401014.png)
+      * 在专门用于代码优化任务的数据集上对LLM模型微调
 
-   *  样本生成：（采什么的样？？）
+      * codeT5（自然语言混合编程语言的输入）
+
+      * few-shot 采样策略旨在让模型在面对少量标记数据时表现良好，通过有效利用有限的样本来提升模型的泛化能力和适应性，训练codeT5（让模型提高输入程序的性能）
+
+      * 微调目标：最小化交叉熵损失 （？？y）
+
+        ![image-20240723163401014](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240723163401014.png)
+        $\theta$​：LLM的参数；N：tokens的数量；V：tokenizer的词汇集；pi,j：位置i的词汇表中第j个标记的预测概率  
+
+   *  样本生成：（采什么的样？？候选代码样本）
 
       *  策略：贪心采样，随机采样
 
-         贪心策略：topB约束
+         * 带波束（束宽为B）的贪心采样：
+           束搜索：根据评分函数保留保留多个备选解，束宽决定每一步中保留的备选解的数量。
+           * 每个样本计算top B候选词汇表及其累积概率并进行排名。 选择所有累积概率最大的候选词汇中的top B序列来重复生成下一个token的过程
+             <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240905113242227.png" alt="image-20240905113242227" style="zoom:67%;" />
 
-   * 强化学习：评分模型，奖励模型![image-20240723173446617](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240723173446617.png)
+         * 随机采样：  
+           * 根据$p_i$​选择 前k个token，并且随机选择一个
+             <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240905113831350.png" alt="image-20240905113831350" style="zoom: 50%;" />
+
+      *  **训练阶段**：
+
+         * **随机抽样**：首先通过随机抽样从独立运行的结果中选择两个候选样本。
+         * **贪婪抽样**：对这两个候选样本进行贪婪抽样，选择具有最高概率的候选样本。
+         * **目标序列**：为了确保至少有一个正确的样本，将数据集中的目标序列也包含在样本列表中。
+         * **输入模型**：将这四个样本用于每一步的模型输入。
+
+      *  **验证和测试阶段**：
+
+         * **贪婪抽样与束搜索**：在验证和测试过程中，使用贪婪抽样与束搜索生成四个样本，并返回排名前两的候选结果。
+         * **评估标准**：对于给定的输入，生成两个候选结果进行评估。一个样本被认为成功，当其执行时间优于输入代码时。
+
+   *  强化学习：评分模型，奖励模型
+
+     * 框架：
+
+       ![image-20240723173446617](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240723173446617.png)
+
+       * (a)：用训练集数据微调LLM模型；将inputcode放进LLM生成优化样本；在score和reward模型中分别计算每个样本的得分和奖励；利用得分和奖励计算Loss给RL，并利用feedback重新训练模型
+       * (b)：reward 模型
+       * (c): Inference :  reward不达标的样本直接丢掉
 
      * reward：![image-20240723174255589](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240723174255589.png)
 
@@ -121,24 +186,39 @@ Fine-Tuning的基本思想是采用已经在大量文本上进行训练的预训
 
        ![image-20240723174408255](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240723174408255.png)
 
+     * 最小化奖励较小的输出的概率：
+       <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240905121523911.png" alt="image-20240905121523911" style="zoom:67%;" />
 
+     * 最大化最佳奖励候选
+       <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240905121815626.png" alt="image-20240905121815626" style="zoom:50%;" />
+
+     * Loss：
+       <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240905121913039.png" alt="image-20240905121913039" style="zoom:67%;" />
+
+       
 
 ## RLADAPTER: BRIDGING LARGE LANGUAGE MODELS TO REINFORCEMENT LEARNING IN OPEN WORLDS  
 
-* key: 考虑增加可调节模块来帮助llm适应环境。 这种见解促使提出RLAdapter框架， 旨在增强RL算法
-  和llm之间的协作。 (不用修改LLM)![image-20240723215431938](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240723215431938.png)
+* RLAdapter：key: 考虑增加可调节模块来帮助llm适应环境。 这种见解促使提出RLAdapter框架， 旨在增强RL算法和llm之间的协作。 (不用修改LLM)![image-20240723215431938](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240723215431938.png)
+* 用下游任务的数据对LLM微调，会导致LLM的泛化性能下降，迁移性下降
 
 #### 3 方法
 
-##### 框架
+##### 框架：
 
 ##### <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240812190518471.png" alt="image-20240812190518471" style="zoom:67%;" />
+
+env和agent将信息提供给Adapter Model；Adapter Model根据Agent最近的动作和环境的反馈对比LLM提出的子目标，看他们的相似度，给出个理解分数，表示agent是否在正确执行和跟随LLM的子目标的指导；Adapter Model将理解分数提供给LLM，LLM进一步指导agent
 
 * 关注于添加可调节模块来帮助llm灵活地适应环境，而不是直接修改llm。
 
 * 适配性模型：
 
   * 输入：关于环境的基本信息和agent当前对语言指导的理解水平u
+
+    g为LLM给的目标，$ t $为嵌入后的轨迹，u测量二者的相似度
+
+    ![image-20240907095356523](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240907095356523.png)
   * 将输入整合成适配器模型的提示，提取重要细节，生成汇总信息
 
 * 训练流程：
@@ -180,7 +260,13 @@ Fine-Tuning的基本思想是采用已经在大量文本上进行训练的预训
   • 在RLAdapter框架下训练的智能体可以表现出更出色的性能， 并表现出更符合常识的行
   为。  
 
-  
+* 评价指标：
+  * 每个环境中：打开新成就，reward+1；获得/减少1个生命点，reward+0.1/-0.1；
+  * 22个环境的总评分：
+    <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240907103445510.png" alt="image-20240907103445510" style="zoom:67%;" />
+* 
+
+
 
 ## ML-based Fault Injection for Autonomous Vehicles: A Case for Bayesian Fault Injection（注入故障）
 
@@ -336,14 +422,223 @@ Fine-Tuning的基本思想是采用已经在大量文本上进行训练的预训
   * KV缓存：先验未知-->动态内存分配
     它存储了模型中每个token（词元）的键（Key）和值（Value）向量，这些向量在模型进行连续token生成时，能够避免重复计算，从而提高推理效率。
 
-#### 动机
+#### 动机（LLM的关键特征）
+
+* 不可预测的内存需求和抢占
+* 请求之间的性能干扰
+* 记忆的碎片：内存的实例间碎片化
+
+####  设计（跨模型实例重新调度）
+
+* 动态迁移跨模型实例重新调度
+
+  * 动态实时迁移：减少实例间复制KV和已经计算资源带来的延迟，导致的停机时间
+  * 跨模型实例：减少碎片，动态为高优先级腾出专用资源（不用为其分配静态资源），能够很快的添加新的实例和腾空删除旧的实例
+
+* LLM请求的实时迁移（Live Migration of LLM Requests  ）
+
+  * KV cache只会迭代追加，前面已经生成tokens不会再修改（lumnix的实时迁移机制利用KV缓存固有的仅追加特性， 将KV缓存复制与解码计算流水线化 ）
+
+  * 可以一边复制前面的tokens，一边计算新的迭代中的新的tokens
+
+  * 源实例一边计算，目标实例一边复制，直到最后一次迭代，源实例挂起，目标实例复制剩余未复制的tokens，迁移结束，剩下的迭代计算在目标实例上进行。（请求的停机时间仅为复制一次迭代生成的KV缓存的时间。  ）
+
+  * 问题：
+
+    * 迁移过程中，实例耗尽了内存
+
+    * 在迁移过程中，请求完成
+
+    * 解决：引入细粒度的握手
+
+      * 源实例发出预分配请求（确保目标有足够空间）；目标实例尝试分配和预留，并且发送成功或者失败信号给源实例（终止或者继续迁移）；
+
+      * 每个阶段之后，源实例还检查正在迁移的请求是否已完成或已被抢占
+      * 在最后阶段完成后，源释放其本地块并通知目的地提交迁移并恢复请求的执行
+
+* 分布式调度框架(llumlets & Global Scheduler)
+  * 定义：根据实例的内存负载做出实例的调度决策，包含本地调度器（在触发时决定要迁移的请求）和迁移协调器（指示模型执行器执行内存复制）
+  * 任务：计算实例的内存负载（重要），排队、批处理和块管理
+  * ![image-20240829113138759](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240829113138759.png)
+
+* 动态调度策略（Dynamic Scheduling Policy  ）
+
+  * 目标：
+    * 通过减少排队延迟、抢占和干扰来改善预填充和解码延迟。
+    * 负载自适应，以处理不同的集群负载并提高成本效率
+    * 新要求的请求优先级
+
+  * Virtual Usage（虚拟用法）
+
+    * 关键：负载平衡，实例上创建空闲空间（碎片清理、优先级排序和耗尽实例）
+
+    * 关键统一成虚拟的负载平衡：设置某些请求的虚拟用法，使实例实际上过载，然后触发负载平衡策略，将请求迁移到其他实例
+
+    * Queuing requests:为在实例中排队的请求分配了一个正的虚拟使用量来反映其对内存需求的资源需求（即使物理使用为0）。排队请求增加了实例的总的虚拟请求量，导致触发了迁移以达到负载平衡，自动实现碎片化整理。
+
+      ![image-20240829120012079](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240829120012079.png)
+
+    * Execution priorities：  请求的虚拟使用为物理使用加上虚拟headroom。虚拟headroom按照运行优先级定义，为了保证高优先级的解码速率。当预留给高优先级的headroom耗光时，实例的总虚拟使用超过限额，会迁移低优先级请求。
+
+      ![image-20240829122249228](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240829122249228.png)
+
+    * Auto-scaling(自动扩展)：当销毁一个实例时，可以在实例上添加一个假的请求（虚拟使用为无限大），由于负载平衡册策略，会自动调度这个实例上的其他请求去其他实例；当创建一个新的实例时，负载平衡策略会自动调度其他实例的请求到这个上面。
+
+      ![image-20240829122636580](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240829122636580.png)
+
+    * 算法：
+
+      ![image-20240829122715530](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240829122715530.png)
+
+  * Policies（策略）
+
+    * Dispatching(调度)：
+
+      1. 请求按优先级调度，同优先级先来先服务；
+
+      2. 请求先分配到自由度最高的实例，自由度的度量为（自由度为负时就是超负载）
+         $$
+         F=(M-\sum V)/B \\
+         M为实例的总内存，\sum V为每个请求的虚拟使用之和\\
+         B为请求的个数，代表内存消耗的速率（请求tokens生成会消耗内存）
+         $$
+
+    * Migration（迁移）：触发是定时的
+      1. 先选择源实例和目标实例的候选集（自由度低于或者超过平均水平的实例）
+      2. 反复选择具有最低和最高自由值的两个实例来对这两个集合中的实例进行配对，然后将它们设置为相应的状态
+      3. 每个源实例的servlet开始连续地将请求迁移到目标，直到它不再设置为源状态（在选择要迁移的请求时，更倾向于优先级较低且序列长度较短的请求）
+      4. 在下一轮中，如果迁移过程中的实例不再超出阈值，lumnix将取消迁移状态的设置，并且迁移将停止
+    * Auto-scaling（自动扩展）：lumnix根据集群负载在实例间正常优先级的平均空闲度来缩放实例
+      1. 策略将平均空闲度保持在[x,y]范围内，当空闲度在一段时间内分别小于x或大于y时，增加或终止实例。
+      2. 选择终止运行请求最少的实例
+
+* 实现：
+
+* 评估：
+
+  * 拓展：
+    * **P50**：指的是数据集按升序排列后，位于第50百分位的数据。换句话说，如果有一个数据集，我们将其中的所有数据按照从小到大的顺序排列，那么P50就是位于中间位置的数据，也就是中位数。这个指标在评估数据集的中心趋势时非常有用，特别是当数据集存在偏态分布时，中位数可能比平均数更能代表数据集的中心位置。
+    * **P99**：指的是数据集按升序排列后，位于第99百分位的数据。即，如果我们有100个数据点（或更多，这里以100为例进行说明），那么P99就是这些数据点中响应时间最长的前1%的数据点的上界。在性能评估和服务质量监控中，P99经常被用来衡量服务的响应延迟。它表示在绝大多数情况下（99%的情况下），服务的响应时间都不会超过这个值。因此，P99是衡量服务稳定性和用户体验的重要指标之一。
+
+    
+
+
+## ACROBAT: OPTIMIZING AUTO-BATCHING OF DYNAMIC DEEP LEARNING AT COMPILE TIME  
+
+* 介绍：
+  * 动态控制流（RNN可以处理变长序列数据，如文本、语音或时间序列数据。在每个时间步，RNN会根据当前输入和之前的状态动态更新隐藏状态，从而实现动态控制流）
+  * 批处理：同时处理多个样本，动态控制流使得人工批处理变得困难
+  * ACROBAT：混合静态+动态优化和端到端（整个神经网络训练或推断的完整流程）张量内核编译
+
+
+
+## Attention Is All You Need  
+
+* 循环网络：顺序执行影响并行性
+* 编码器解码器：都可以是RNN，CNN。编码器负责提取特征向量，解码器负责将特征向量转换为目标向量
+
+​    <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240912160503457.png" alt="image-20240912160503457" style="zoom:50%;" />
+
+* attention:  Q,K,V三个向量分别乘输入X，得到QKV矩阵，Q*K并且归一得到权重系数A矩阵，A * V得到最后value
+
+  <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240912161426717.png" alt="image-20240912161426717" style="zoom:67%;" />
+
+  * Q是query，是输入的信息；key和value成组出现，通常是原始文本等已有的信息；
+  * 通过计算Q与K之间的相关性a，得出不同的K对输出的重要程度；
+  * 再与对应的v进行相乘求和，就得到了Q的输出；
+
+* 自注意：（输入的每个元素有自己的QKV,探究输入间的关系），attention的Q来自于外部
+
+  <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240912161925032.png" alt="image-20240912161925032" style="zoom:80%;" />
+
+* 多头注意：输入对不同的QKV执行多次注意，将结果输入全连接得到最终输出
+  <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240912171450679.png" alt="image-20240912171450679" style="zoom:80%;" />
+
+* transformer：
+
+  * 词embedding+位置embedding=transformer表示-->单词向量表示矩阵
+
+    <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240912174300483.png" alt="image-20240912174300483" style="zoom:67%;" />
+
+    * 位置embeding：
+      <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240912214051342.png" alt="image-20240912214051342" style="zoom:67%;" />
+  
+  * 将单词向量表示矩阵传入六个编码模块
+    <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240912174842489.png" alt="image-20240912174842489" style="zoom: 33%;" />
+  * 将编码矩阵输入到六个解码器解码，每次一个一个单词翻译（依据前面的翻译结果，后面的单词给掩码）
+
+​                <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240912175302995.png" alt="image-20240912175302995" style="zoom:50%;" />
+
+* 编码器模块：
+  * Add: **X**+MultiHeadAttention(**X**)
+  * Norm： Layer Normalization，通常用于 RNN 结构，Layer Normalization 会将每一层神经元的输入都转成均值方差都一样的，这样可以加快收敛
+  * Feed Forward: 两层全连接层，第一层激活函数为ReLu,第二层不使用激活函数，$max(0,XW_1+b_1)W_2+b_2$
+
+* 解码器模块：
+
+  * 第一个<code>Multi-Head Attention</code>：采用masked操作，翻译的过程中是顺序翻译的，即翻译完第 i 个单词，才可以翻译第 i+1 个单词
+    * 确定输入矩阵（输入语句为正确单词序列 Teacher Forcing）和Mask矩阵
+    * 计算$QK^T$
+    * $QK^T$和$Mask$矩阵按位相乘，遮挡单词信息
+    * $MaskQK^T$​和V相乘得到Z
+  * 第二个<code>Multi-Head Attention</code>：
+    * K,V 为编码器传入的编码信息矩阵C
+    * Q为上一个解码器模块的输出计算，若为第一个解码器模块的输入，则为X
+
+  * <code>Softmax</code>：利用最终输出预测单词
+
+* <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240912214941431.png" alt="image-20240912214941431" style="zoom:50%;" />
+
+## Improving Language Understanding by Generative Pre-Training
+
+无监督学习未标注样本（预训练+微调）
+
+* 困难：预训练的优化目标，迁移预训练学习的表示到目标任务的有效方法
+* 半监督方法：在未标注数据上用语言建模目标来学习神经网络模型的初始参数；用有监督目标对参数进行调整以适应目标任务
+* 框架：
+  * 无监督预训练：
+    * log P(ui|ui−k, . . . , ui−1)给定前k个标记的条件下预测第i个标记ui的概率；在训练过程中，模型会尝试调整其参数Θ，使得L1(U)的值尽可能大
+      <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240913001343955.png" alt="image-20240913001343955" style="zoom:50%;" />
+  * 有监督微调：
+    * <img src="C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240913002823323.png" alt="image-20240913002823323" style="zoom:50%;" />
+      $L_2(c)$是有监督学习的目标函数，$L_1(c)$​语言建模的目标函数（无监督），用于最大化模型在给定上下文条件下预测下一个标记的概率
+  * 任务特定的输入转换：
+    * 文本蕴含：蕴含任务，前提和假设之间用分隔符分隔
+    * 相似性：包含两种可能的句子顺序（中间有分隔符）
+    * 问答和常识推理：给定一个上下文文档z，一个问题q，以及一组可能的答案{ak}。我们将文档上下文和问题与每个可能的答案连接起来，中间添加分隔符标记（$），得到[z; q; $​; ak]
+
+## Language Models are Unsupervised Multitask Learners
+
+零样本学习：让预先训练好的模型预测先前未知数据的类别标签，即训练数据中不存在的数据样本（没有标注数据的情况下，预训练得到多任务的语言模型）
+
+多任务学习，提高通用性能，利用预训练和有监督微调的结合，但是没有监督数据可用时，语言模型能够在零样本（zero-shot）设置下执行下游任务——无需任何参数或架构修改
+
+* 方法：
+
+  * 语言建模的核心目标是对自然语言中符号序列的概率分布进行建模，这些序列可以是单词、字符或其他类型的符号。
+    * 在给定数据集上进行无监督分布估计，输出为候选单词的概率，候选单词来自于输入数据集
+  * 多任务概率框架建模：p(output|input, task)
+  * 语言模型在没有明确指导哪些符号是输出目标的情况下，理论下可以学习执行特定任务，但是学习速度慢
+  * 训练数据集：构建大且多样化的数据集，避免对要执行的任务做出假设
+  * 输入表示：字节版BPE，为了避免次优合并，防止字节序列跨字符类别合并，但是空格为例外
+  * 模型：
+* 实验：
+
+  * 儿童书籍测试，LAMBADA（测试系统在文本建模长距离依赖能力），Winograd Schema挑战（解决文本中的歧义能力），阅读理解，翻译，问答，泛化与记忆；
 
 
 
 
+## Language Models are Few-Shot Learners
+
+扩大语言模型极大地提高了与任务无关的、少样本的性能，有时甚至可以与之前最先进的微调方法相媲美 
+
+* pre-train + fine-tune存在问题：fine-tune需要大量标注数据集，pre-train容易过拟合，泛化能力差
+  * 解决：meta-learning和增大变压器语言模型的容量
+
+* 不给微调和梯度更新，只给上下文提示
+  ![image-20240913152624666](C:\Users\丁晓琪\AppData\Roaming\Typora\typora-user-images\image-20240913152624666.png)
+* 训练数据处理：基于高质量参考语料库对语料过滤；执行模糊重复数据消除；将已知高质量参考预料库添加到训练组合中
 
 
-
-
-​                                       
 
