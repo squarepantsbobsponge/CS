@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预约座位</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: url('{{ url_for("static", filename="img/book_bg.jpg") }}') no-repeat center center/cover;
+            backdrop-filter: blur(5px);
+            color: #333;
+            font-family: 'Source Sans Pro', Arial, sans-serif;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 1s ease-in-out;
+        }
+        .container h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+        .container form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .container form label {
+            font-weight: bold;
+        }
+        .container form input, .container form select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .container form button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .container form button:hover {
+            background-color: #45a049;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 弹窗样式 */
+        .flash-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 5px;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>预约座位</h1>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <label for="start_time">开始时间</label>
+            {{ form.start_time(class="form-control") }}
+            <label for="end_time">结束时间</label>
+            {{ form.end_time(class="form-control") }}
+            <button type="submit">提交预约</button>
+        </form>
+        <button onclick="window.location.href='{{ url_for('search') }}'">返回搜索页面</button>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="flash-message" id="flash-message"></div>
+
+    <script>
+        function showFlashMessage(message) {
+            const flashMessage = document.getElementById('flash-message');
+            flashMessage.textContent = message;
+            flashMessage.style.display = 'block';
+            setTimeout(() => {
+                flashMessage.style.display = 'none';
+            }, 2000);
+        }
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    showFlashMessage('{{ message }}');
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </script>
+</body>
+</html>

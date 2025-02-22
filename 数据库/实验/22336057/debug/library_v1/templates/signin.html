@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>签到页面</title>
+    <style>
+        body {
+            font-family: 'Source Sans Pro', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #52575c;
+            line-height: 1.75em;
+            font-size: 14pt;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-top: 2em;
+        }
+        table {
+            width: 80%;
+            max-width: 800px;
+            margin: 2em auto;
+            border-collapse: collapse;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        table th {
+            background-color: #f2f2f2;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        a {
+            display: block;
+            text-align: center;
+            margin-top: 2em;
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        a:hover {
+            color: #45a049;
+        }
+        .search-container {
+            margin-bottom: 2em;
+            text-align: center;
+        }
+        .search-container input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .search-container button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .search-container button:hover {
+            background-color: #45a049;
+        }
+        .no-result {
+            text-align: center;
+            color: red;
+            margin-top: 1em;
+        }
+    </style>
+</head>
+<body>
+    <h1>签到页面</h1>
+
+    <!-- 搜索功能 -->
+    <div class="search-container">
+        <input type="text" id="searchSid" placeholder="请输入学号">
+        <button onclick="searchBySid()">搜索</button>
+    </div>
+
+    <!-- 显示搜索结果或所有记录 -->
+    <div id="results-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>座位号</th>
+                    <th>预约人</th>
+                    <th>是否签到</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in mock_signin_records %}
+                <tr>
+                    <td>{{ record["id"] }}</td>
+                    <td>{{ record["sid"] }}</td>
+                    <td>{{ "已签到" if record["isSingIn"] == "Y" else "未签到" }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('signin') }}">
+                            {{ form.hidden_tag() }}
+                            <input type="hidden" name="id" value="{{ record['id'] }}">
+                            <input type="hidden" name="sid" value="{{ record['sid'] }}">
+                            <button type="submit">签到</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 无结果提示 -->
+    <div id="no-result" class="no-result" style="display: none;">无相关预约信息</div>
+
+    <a href="{{ url_for('admin_page') }}" class="btn btn-secondary" role="button">返回管理者页面</a>
+
+    <script>
+        function searchBySid() {
+            const sid = document.getElementById('searchSid').value;
+            const resultsContainer = document.getElementById('results-container');
+            const noResultMessage = document.getElementById('no-result');
+
+            // 清空之前的搜索结果
+            resultsContainer.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>座位号</th>
+                            <th>预约人</th>
+                            <th>是否签到</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="search-results"></tbody>
+                </table>
+            `;
+
+            // 发送搜索请求
+            fetch(`/search_signin?sid=${sid}`)
+                .then(response => response.json())
+                .then(data => {
+                    const searchResults = document.getElementById('search-results');
+
+                    if (data.length > 0) {
+                        // 显示搜索结果
+                        data.forEach(record => {
+                            searchResults.innerHTML += `
+                                <tr>
+                                    <td>${record.id}</td>
+                                    <td>${record.sid}</td>
+                                    <td>${record.isSingIn === "Y" ? "已签到" : "未签到"}</td>
+                                    <td>
+                                        <form method="post" action="{{ url_for('signin') }}">
+                                            <input type="hidden" name="id" value="${record.id}">
+                                            <input type="hidden" name="sid" value="${record.sid}">
+                                            <button type="submit">签到</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        noResultMessage.style.display = 'none';
+                    } else {
+                        // 显示无结果提示
+                        noResultMessage.style.display = 'block';
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

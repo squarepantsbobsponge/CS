@@ -1,0 +1,41 @@
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>登录页面</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    </head>
+<body>
+    <!--读取flashed里面的值，返回路由函数的提示信息，优化可以改掉它的显示位置和颜色字体-->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flashes">
+        {% for category, message in messages %}
+          <li class="{{ category }}">{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    <!--输出表单信息，优化可以更改表单的形式和表项的布置-->
+    <div class="centered-form">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <p>
+                {{ form.userid.label }}<br>
+                {{ form.userid(size=32) }}<!--控制宽度-->
+            </p>
+            <p>
+                {{ form.password.label }}<br>
+                {{ form.password(size=32) }}
+            </p>
+            <p>
+                {{ form.role.label }}<br>
+                {{ form.role(size=2) }}
+            </p>
+            <p>{{ form.submit() }}</p>
+        </form>
+    </div>
+</body>
+</html>
+<!--更多优化：背景图和网站名-->
+

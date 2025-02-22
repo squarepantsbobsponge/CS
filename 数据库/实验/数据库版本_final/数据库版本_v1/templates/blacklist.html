@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黑名单管理页面</title>
+    <style>
+        body {
+            font-family: 'Source Sans Pro', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #52575c;
+            line-height: 1.75em;
+            font-size: 14pt;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-top: 2em;
+        }
+        table {
+            width: 80%;
+            margin: 2em auto;
+            border-collapse: collapse;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        table th {
+            background-color: #f2f2f2;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        a {
+            display: block;
+            text-align: center;
+            margin-top: 2em;
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        a:hover {
+            color: #45a049;
+        }
+        .not-found {
+            text-align: center;
+            color: red;
+            margin-top: 20px;
+        }
+
+        /* 导航栏样式 */
+        nav {
+            position: fixed; /* 固定在页面顶部 */
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #333;
+            overflow: hidden;
+            padding: 14px 16px;
+            z-index: 1000; /* 确保导航栏在最上层 */
+        }
+        nav a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        nav a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        nav a.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .logout-button {
+            float: right; /* 将按钮放在导航栏的右侧 */
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .logout-button:hover {
+            background-color: #45a049;
+        }
+
+        /* 新增样式 */
+        .modify-input {
+            display: none;
+            margin-top: 10px;
+        }
+        .modify-input input {
+            width: 100px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .modify-input button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .modify-input button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav>
+        <a href="{{ url_for('admin_page') }}" class="btn btn-secondary" role="button">管理者页面</a>
+        <a href="{{ url_for('signin') }}" class="btn btn-secondary" role="button">签到页面</a>
+        <a href="{{ url_for('blacklist') }}" class="btn btn-secondary active" role="button">黑名单</a>
+        <button class="logout-button" onclick="window.location.href='{{ url_for('exit_login') }}'">退出登录</button>
+    </nav>
+
+    <h1>黑名单管理页面</h1>
+
+    <!-- 黑名单信息显示区域 -->
+    <div id="blacklist-info" style="display: block;">
+        <table>
+            <thead>
+                <tr>
+                    <th>学号</th>
+                    <th>姓名</th>
+                    <th>冷冻时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in results[1] %}
+                <tr>
+                    <td>{{ record[0] }}</td>
+                    <td>{{ record[1] }}</td>
+                    <td>{{ record[3] }}</td>
+                    <td>
+                        <button onclick="showModifyInput('{{ record[0] }}')">修改</button>
+                        <div class="modify-input" id="modify-input-{{ record[0] }}">
+                            <input type="number" id="new-status-{{ record[0] }}" placeholder="输入新冷冻时间" min="0">
+                            <button onclick="modifyStatus('{{ record[0] }}')">确认</button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 查询输入框 -->
+    <div id="query-input" style="text-align: center; margin-top: 20px;">
+        <input type="text" id="query-sid" placeholder="请输入学号">
+        <button onclick="queryBlacklist()">确认查询</button>
+    </div>
+
+    <!-- 查询结果显示区域 -->
+    <div id="query-result" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>学号</th>
+                    <th>姓名</th>
+                    <th>冷冻时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="query-result-body">
+                <!-- 查询结果将动态插入到这里 -->
+            </tbody>
+        </table>
+        <div id="not-found" class="not-found" style="display: none;">此人不在黑名单中</div>
+    </div>
+
+    <a href="{{ url_for('admin_page') }}" class="btn btn-secondary" role="button">返回管理者页面</a>
+
+    <script>
+        // 显示修改输入框
+        function showModifyInput(sid) {
+            document.getElementById('modify-input-' + sid).style.display = 'block';
+        }
+
+        // 修改冷冻时间
+        function modifyStatus(sid) {
+            const newStatus = document.getElementById('new-status-' + sid).value;
+            if (newStatus >= 0) {
+                // 发送 AJAX 请求到后端
+                fetch('/blacklist', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ sid: sid, status: newStatus })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(data.message); // 显示后端返回的消息
+                        location.reload(); // 刷新页面
+                    } else {
+                        alert(data.message); // 显示错误消息
+                    }
+                });
+            } else {
+                alert('冷冻时间必须大于等于 0');
+            }
+        }
+
+        // 查询功能
+        function queryBlacklist() {
+            const sid = document.getElementById('query-sid').value;
+            const resultBody = document.getElementById('query-result-body');
+            const notFoundMessage = document.getElementById('not-found');
+
+            resultBody.innerHTML = '';
+            notFoundMessage.style.display = 'none';
+
+            // 发送 AJAX 请求到后端
+            fetch('/blacklist', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ sid: sid })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // 显示查询结果
+                    data.data.forEach(record => {
+                        resultBody.innerHTML += `
+                            <tr>
+                                <td>${record.sid}</td>
+                                <td>${record.sname}</td>
+                                <td>${record.status}</td>
+                                <td>
+                                    <button onclick="showModifyInput('${record.sid}')">修改</button>
+                                    <div class="modify-input" id="modify-input-${record.sid}">
+                                        <input type="number" id="new-status-${record.sid}" placeholder="输入新冷冻时间" min="0">
+                                        <button onclick="modifyStatus('${record.sid}')">确认</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    document.getElementById('query-result').style.display = 'block';
+                } else {
+                    // 显示未找到提示
+                    notFoundMessage.style.display = 'block';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黑名单管理页面</title>
+</head>
+<body>
+    <h1>黑名单管理页面</h1>
+    <form method="post">
+        {{form.hidden_tag()}}
+        <p>
+            {{form.choice.label}}<br>
+            {{form.choice(size=3)}}
+        </p>
+        <p>
+            {{form.sid.label}}<br>
+            {{form.sid(size=3)}}
+        </p>
+        <p>
+            {{form.status.label}}<br>
+            {{form.status(size=3)}}
+        </p>
+        <p>
+            {{form.submit()}}
+        </p>
+    </form>    
+    <a href="{{ url_for('admin_page')}}",class="btn btn-secondary" role="button">返回管理者页面</a>
+    {%if results[1] == None %}
+        <p id="请重试">请重试</p>
+        <script>
+            setTimeout(function() {
+                document.getElementById('请重试').style.display = 'none';
+            }, 3000); // 3000毫秒等于3秒
+        </script>
+    {% elif results[0]=='1' %}
+    <h3>所有黑名单记录</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>学号</th>
+                    <th>姓名</th>
+                    <th>剩余解冻时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results[1] %}
+                <tr>
+                    <td>{{ result[0] }}</td>
+                    <td>{{ result[1] }}</td>
+                    <td>{{result[3]}}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% elif results[0]=='2' %}
+    <h3>修改/添加成功记录</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>学号</th>
+                <th>姓名</th>
+                <th>剩余解冻时间</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in results[1] %}
+            <tr>
+                <td>{{ result[0] }}</td>
+                <td>{{ result[1] }}</td>
+                <td>{{result[3]}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {%endif%}
+</body>
+</html>
+

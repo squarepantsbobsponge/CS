@@ -1,0 +1,81 @@
+<html>
+    <head>
+        <style>
+            .booked { background-color: blue; color: white; }
+            .available { background-color: green; color: white; }
+        </style>
+    </head>
+<body>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.choice1.label }}<br>
+            {{ form.choice1(size=3) }}
+        </p>
+        <p>
+            {{ form.choice2.label }}<br>
+            {{ form.choice2(size=3) }}
+        </p>
+        <p>{{ form.submit() }}</p>
+    </form>
+    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('individual_information')}}'">个人信息</button>
+    <button type="button" class="btn btn-secondary" onclick="refreshPage()">刷新页面</button>
+    <!-- 结果列表部分 --><!--results中传入的是一个seats[id][timeslot]的字典，大字典键为id，value为小字典，小字典键为time_slot，value为是否可用Y/N-->
+    {% if results %}
+    <h2>Search Results</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>座位id</th>
+                <th>8:00</th>
+                <th>9:00</th>
+                <th>10:00</th><!--这里可以增添更多时间段，但是需要去后端search函数里面修改all_time_slot数组-->
+                <th>11:00</th>
+                <th>12:00</th>
+                <th>13:00</th>
+                <th>14:00</th>
+                <th>15:00</th>
+                <th>16:00</th>
+                <th>17:00</th>
+                <th>18:00</th>
+                <th>19:00</th>
+                <th>20:00</th>
+                <th>21:00</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for seat_id, time_slots in results.items() %}
+            <tr>
+                <td>{{ seat_id }}</td>
+                {% for time_slots,status in time_slots.items() %}
+                <td class="{{ 'booked' if status == 'Y' else 'available' }}">{{ status }}</td>
+                {% endfor %}
+                <td>
+                    <button type="button" onclick=" bookSeat('{{ seat_id }}')">预约</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% else %}
+    <p>No seats found.</p>
+    {% endif %}
+</body>
+<script>
+    function bookSeat(seatId) {
+     // 构造 URL，包含 seatId 参数
+
+    var url = '/book_seat?seatId=' + encodeURIComponent(seatId);
+    console.log('Navigating to:', url);
+    // 导航到新页面
+    window.location.href = url;
+}
+</script>
+<script>
+    function refreshPage() {
+        // 调用 window.location.reload() 方法刷新当前页面
+        window.location.reload();
+    }
+</script>
+</html>

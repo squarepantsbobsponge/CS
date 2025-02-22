@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            /* 页面的透明图 0-1 */
+            opacity: 0.8;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            /* 页面的背景图片，可以修改 */
+            background: url('{{ url_for("static", filename="img/library_pic.jpg") }}');
+            background-size: cover;
+            transition: backdrop-filter 1s ease-in-out; /* 背景模糊的过渡效果 */
+        }
+
+        /* 初始状态：背景不模糊，内容隐藏 */
+        body.blur {
+            backdrop-filter: blur(10px); /* 背景模糊效果 */
+        }
+
+        .box {
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 420px; /* 增加高度以容纳角色选择 */
+            width: 350px;
+            border-top: 1px solid rgba(255, 255, 255, 0.7);
+            border-left: 1px solid rgba(255, 255, 255, 0.7);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+            border-right: 1px solid rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.4);
+            opacity: 0; /* 初始状态：内容隐藏 */
+            transform: translateY(50px); /* 初始状态：内容在下方 */
+            transition: opacity 1s ease-in-out, transform 1s ease-in-out; /* 内容浮动的过渡效果 */
+        }
+
+        /* 动画触发后的状态：内容显示并浮动到中心 */
+        body.blur .box {
+            opacity: 1; /* 内容显示 */
+            transform: translateY(0); /* 内容浮动到中心 */
+        }
+
+        .box h2 {
+            color: rgb(102, 99, 99);
+            margin-bottom: 20px;
+        }
+        .box .input-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+        .box .input-box label {
+            margin-bottom: 5px;
+            color: rgb(102, 99, 99);
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .box .input-box input, .box .input-box select {
+            box-sizing: border-box;
+            color: rgba(12, 12, 12, 0.9);
+            font-size: 14px;
+            height: 35px;
+            width: 250px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 5px;
+            transition: 0.2s;
+            outline: none;
+            padding: 0 10px;
+            letter-spacing: 1px;
+        }
+        .box .input-box input:focus, .box .input-box select:focus {
+            border: 1px solid rgba(153, 151, 151, 0.8);
+        }
+        .box .choose-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+        .box .choose-box label {
+            margin-bottom: 5px;
+            color: rgb(102, 99, 99);
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .box .choose-box select {
+            /* 下拉框的样式 */
+            box-sizing: border-box;
+            color: rgba(102, 99, 99, 0.9); /* 与“请输入账号”一致的文字颜色 */
+            font-size: 14px;
+            height: 35px;
+            width: 250px;
+            background: rgba(255, 255, 255, 0.8); /* 与“请输入账号”一致的背景颜色 */
+            border: 1px solid rgba(255, 255, 255, 0.8); /* 与“请输入账号”一致的边框颜色 */
+            border-radius: 5px;
+            transition: 0.2s;
+            outline: none;
+            padding: 0 10px;
+            letter-spacing: 1px;
+            appearance: none; /* 移除默认的下拉箭头 */
+            -webkit-appearance: none; /* 兼容 Safari */
+            -moz-appearance: none; /* 兼容 Firefox */
+        }
+
+        .box .choose-box select:focus {
+            /* 下拉框获得焦点时的样式 */
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .box .choose-box select option {
+            /* 下拉选项的样式 */
+            color: rgba(27, 93, 117, 0.9); /* 与“请输入账号”一致的文字颜色 */
+            background: rgba(255, 255, 255, 0.8); /* 与“请输入账号”一致的背景颜色 */
+        }
+        .box .btn-box {
+            width: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .box .btn-box div {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: start;
+            margin-top: 20px;
+        }
+        .box .btn-box div button {
+            width: 115px;
+            height: 35px;
+            border: 1px solid rgba(197, 81, 58, 0.8);
+            background: rgba(197, 81, 58, 0.8);
+            color: rgba(255, 255, 255, 0.9);
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+        .box .btn-box div button:nth-of-type(2) {
+            margin-left: 10px;
+        }
+        .box .btn-box div button:hover {
+            border: 1px solid rgba(248, 108, 76, 0.8);
+            background: rgba(248, 108, 76, 0.8);
+        }
+
+        /* 弹窗样式 */
+        .flash-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 5px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .system-title {
+            position: absolute;
+            top: 10%; /* 调整位置 */
+            left: 50%;
+            transform: translateX(-50%);
+            color: black;
+            font-size: 55px;
+            font-weight: bold;
+            z-index: 100; /* 确保在其他元素上方 */
+        }
+    </style>
+</head>   
+<body>
+    <!-- 新增的标题 -->
+    <div class="system-title">图书馆座位预定系统</div>
+
+    <div class="box">
+        <h2>Login</h2>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="input-box">
+                <label for="">账号</label>
+                {{ form.userid(size=32, placeholder="请输入账号") }}
+            </div>
+            <div class="input-box">
+                <label for="">密码</label>
+                {{ form.password(size=32, placeholder="请输入密码") }}
+            </div>
+            <div class="choose-box">
+                <label for="">用户类型</label>
+                {{ form.role(class="form-control") }}
+            </div>
+            <div class="btn-box">
+                <div>
+                    <button type="submit">登录</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="flash-message" id="flash-message"></div>
+
+    <script>
+        // 页面加载完成后触发模糊效果和内容浮动
+        window.onload = function() {
+            document.body.classList.add('blur');
+        };
+
+        // 监听下拉框的 change 事件
+        document.querySelector('.choose-box select').addEventListener('change', function() {
+            if (this.value === 'none') {
+                this.style.color = 'rgba(102, 99, 99, 0.9)'; // 未选中时显示占位符
+            } else {
+                this.style.color = 'rgba(27, 93, 117, 0.9)'; // 选中后显示类型
+            }
+        });
+
+        // 显示弹窗
+        function showFlashMessage(message) {
+            const flashMessage = document.getElementById('flash-message');
+            flashMessage.textContent = message;
+            flashMessage.style.display = 'block';
+            setTimeout(() => {
+                flashMessage.style.display = 'none';
+            }, 2000);
+        }
+
+        // 检查是否有 flash 消息
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    showFlashMessage('{{ message }}');
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </script>
+</body>
+</html>

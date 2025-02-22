@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黑名单管理页面</title>
+    <style>
+        body {
+            font-family: 'Source Sans Pro', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #52575c;
+            line-height: 1.75em;
+            font-size: 14pt;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-top: 2em;
+        }
+        form {
+            margin: 2em auto;
+            width: 80%;
+            max-width: 600px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        form p {
+            margin-bottom: 1em;
+        }
+        form label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 0.5em;
+        }
+        form input, form select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        form button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        form button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 80%;
+            margin: 2em auto;
+            border-collapse: collapse;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        table th {
+            background-color: #f2f2f2;
+        }
+        a {
+            display: block;
+            text-align: center;
+            margin-top: 2em;
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        a:hover {
+            color: #45a049;
+        }
+        #请重试 {
+            text-align: center;
+            color: red;
+            margin-top: 1em;
+        }
+    </style>
+</head>
+<body>
+    <h1>黑名单管理页面</h1>
+    <form method="post">
+        {{form.hidden_tag()}}
+        <p>
+            {{form.choice.label}}<br>
+            {{form.choice(size=3)}}
+        </p>
+        <p>
+            {{form.sid.label}}<br>
+            {{form.sid(size=3)}}
+        </p>
+        <p>
+            {{form.status.label}}<br>
+            {{form.status(size=3)}}
+        </p>
+        <p>
+            {{form.submit()}}
+        </p>
+    </form>    
+    <a href="{{ url_for('admin_page')}}" class="btn btn-secondary" role="button">返回管理者页面</a>
+    {%if results[1] == None %}
+        <p id="请重试">请重试</p>
+        <script>
+            setTimeout(function() {
+                document.getElementById('请重试').style.display = 'none';
+            }, 3000); // 3000毫秒等于3秒
+        </script>
+    {% elif results[0]=='1' %}
+    <h3 style="text-align: center;">所有黑名单记录</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>学号</th>
+                    <th>姓名</th>
+                    <th>剩余解冻时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results[1] %}
+                <tr>
+                    <td>{{ result[0] }}</td>
+                    <td>{{ result[1] }}</td>
+                    <td>{{result[3]}}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% elif results[0]=='2' %}
+    <h3 style="text-align: center;">修改/添加成功记录</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>学号</th>
+                <th>姓名</th>
+                <th>剩余解冻时间</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in results[1] %}
+            <tr>
+                <td>{{ result[0] }}</td>
+                <td>{{ result[1] }}</td>
+                <td>{{result[3]}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {%endif%}
+</body>
+</html>

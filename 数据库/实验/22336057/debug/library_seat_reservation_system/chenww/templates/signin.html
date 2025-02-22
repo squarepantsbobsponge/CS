@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>签到页面</title>
+</head>
+<body>
+    <h1>签到页面</h1>
+   
+    <form method="post">
+        {{form.hidden_tag()}}
+        <p>
+            {{form.id.label}}<br>
+            {{form.id(size=3)}}
+        </p>
+        <p>
+            {{form.sid.label}}<br>
+            {{form.sid(size=3)}}
+        </p>
+        <p>
+            {{form.sign_time.label}}<br>
+            {{form.sign_time(size=3)}}
+        </p>
+        <p>
+            {{form.submit()}}
+        </p>
+    </form>    
+    <a href="{{ url_for('admin_page')}}",class="btn btn-secondary" role="button">返回管理者页面</a>
+    {% if results[1] == None %}
+        <p id="没有预约记录">没有预约记录</p>
+        <script>
+             setTimeout(function() {
+                document.getElementById('没有预约记录').style.display = 'none';
+            }, 3000); // 3000毫秒等于3秒
+        </script>
+    {% elif results[0]==True %}
+        <p>签到成功</p>
+    {% else %}
+        <p>签到失败</p>
+    {%endif%}
+</body>
+</html>
+

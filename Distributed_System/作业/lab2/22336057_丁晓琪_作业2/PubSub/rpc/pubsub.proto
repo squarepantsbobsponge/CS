@@ -1,0 +1,25 @@
+syntax="proto3";
+
+service SubService{ //类
+ //订阅主题的rpc方法：客户端发起订阅请求
+ rpc Subscribe(SubscribeRequest) returns(SubscribeResponse);
+ //流式推送消息：客户端订阅成功后，发出空的请求，服务器将主题内消息推送,是Message的信息流
+ rpc Message_Stream(request_id) returns (stream topic_Message);
+}
+
+message SubscribeRequest{
+    string topic_name=1;
+    string id=2;
+}
+message SubscribeResponse{
+    int32 flag=1; //表示是否订阅成功
+}
+
+message request_id{
+    string id=1;
+}
+message topic_Message{
+    string topic=1;//订阅的主题
+    string content=2;//传递内容
+    int64 timestamp=3; //时间戳
+}

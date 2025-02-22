@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>搜索座位</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: url('{{ url_for("static", filename="img/signin_pic.jpg") }}') no-repeat center center/cover;
+            backdrop-filter: blur(5px);
+            color: #333;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            width: 90%;
+            max-width: 1200px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 1s ease-in-out;
+            overflow-x: auto; /* 增加滚动条 */
+        }
+        .container h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+        .container form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .container form label {
+            font-weight: bold;
+        }
+        .container form input, .container form select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .container form button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .container form button:hover {
+            background-color: #45a049;
+        }
+        .container table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .container table th, .container table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .container table th {
+            background-color: #f2f2f2;
+        }
+        .container table td.available {
+            background-color: #ffcc99; /* 橙色，表示可预约 */
+        }
+        .container table td.booked {
+            background-color: #cccccc; /* 灰色，表示已预约 */
+        }
+        .container .legend {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-start;
+            gap: 20px;
+        }
+        .container .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .container .legend-item .color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+        .container .legend-item .color-box.available {
+            background-color: #ffcc99; /* 橙色 */
+        }
+        .container .legend-item .color-box.booked {
+            background-color: #cccccc; /* 灰色 */
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 导航栏样式 */
+        nav {
+            position: fixed; /* 固定在页面顶部 */
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #333;
+            overflow: hidden;
+            padding: 14px 16px;
+            z-index: 1000; /* 确保导航栏在最上层 */
+        }
+        nav a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        nav a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        nav a.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .logout-button {
+            float: right; /* 将按钮放在导航栏的右侧 */
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .logout-button:hover {
+            background-color: #45a049;
+        }
+
+        /* 弹窗样式 */
+        .flash-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 5px;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav>
+        <a href="{{ url_for('individual_information') }}" class="btn btn-secondary" role="button">个人主页</a>
+        <a href="{{ url_for('search') }}" class="btn btn-secondary active" role="button">座位信息查询</a>
+        <button class="logout-button" onclick="window.location.href='{{ url_for('exit_login') }}'">退出登录</button>
+    </nav>
+    
+    <div class="container" style="padding-top: 80px;">
+        <h1>搜索座位</h1>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <label for="choice1">选择楼层</label>
+            {{ form.choice1(class="form-control") }}
+            <label for="choice2">座位号</label>
+            {{ form.choice2(class="form-control") }}
+            <button type="submit">搜索</button>
+        </form>
+        <button onclick="window.location.href='{{ url_for('individual_information') }}'">返回个人主页</button>
+
+        <!-- 提示信息 -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="color-box available"></div>
+                <span>可预约</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box booked"></div>
+                <span>已预约</span>
+            </div>
+        </div>
+
+        {% if results %}
+        <h2>搜索结果</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>座位号</th>
+                    <th>8:00</th>
+                    <th>9:00</th>
+                    <th>10:00</th>
+                    <th>11:00</th>
+                    <th>12:00</th>
+                    <th>13:00</th>
+                    <th>14:00</th>
+                    <th>15:00</th>
+                    <th>16:00</th>
+                    <th>17:00</th>
+                    <th>18:00</th>
+                    <th>19:00</th>
+                    <th>20:00</th>
+                    <th>21:00</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for seat_id, time_slots in results.items() %}
+                <tr>
+                    <td>{{ seat_id }}</td>
+                    {% for time_slot, status in time_slots.items() %}
+                    <td class="{{ 'booked' if status == 'Y' else 'available' }}">{{ status }}</td>
+                    {% endfor %}
+                    <td>
+                        <button onclick="bookSeat('{{ seat_id }}')">预约</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>没有找到座位。</p>
+        {% endif %}
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="flash-message" id="flash-message"></div>
+
+    <script>
+        function bookSeat(seatId) {
+            window.location.href = '/book_seat?seatId=' + encodeURIComponent(seatId);
+        }
+
+        // 显示弹窗
+        function showFlashMessage(message) {
+            const flashMessage = document.getElementById('flash-message');
+            flashMessage.textContent = message;
+            flashMessage.style.display = 'block';
+            setTimeout(() => {
+                flashMessage.style.display = 'none';
+            }, 2000);
+        }
+
+        // 检查是否有 flash 消息
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    showFlashMessage('{{ message }}');
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </script>
+</body>
+</html>

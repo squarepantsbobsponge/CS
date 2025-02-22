@@ -1,0 +1,87 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book an Appointment</title>
+    <!-- 你可以在这里添加CSS样式来美化表单 -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 50px;
+        }
+        form {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        div {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        select, button {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .flash-messages {
+            margin-top: 20px;
+        }
+        .flash-messages ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .flash-messages li {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Book an Appointment</h1>
+    <form method="POST">
+        {{ form.hidden_tag() }}  <!-- 必须的，用于CSRF保护 -->
+        <div>
+            {{ form.start_time.label }}<br>
+            {{ form.start_time(class='form-control') }}<br>
+        </div>
+        <div>
+            {{ form.end_time.label }}<br>
+            {{ form.end_time(class='form-control') }}<br>
+        </div>
+        <div>
+            {{ form.submit(class='btn btn-primary') }}<br>
+        </div>
+    </form>
+    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('search')}}'">返回</button>
+    <!-- 显示闪现消息 -->
+    <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul>
+            {% for category, message in messages %}
+              <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+    </div>
+</body>
+</html>

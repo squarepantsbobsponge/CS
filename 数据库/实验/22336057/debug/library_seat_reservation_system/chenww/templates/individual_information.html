@@ -1,0 +1,37 @@
+<html>
+<body>
+    <h1>Welcome, {{ userid }}!</h1>  <!-- 在这里显示用户名字 -->
+    <h2>{{status}}</h2>      <!--显示账号的黑名单状态-->
+    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('search')}}'">Search and book</button>
+    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('exit_login')}}'">退出登录</button>
+    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('unsubscribe')}}'">取消订阅</button>
+    <!-- 结果列表部分 -->
+    {% if results %}
+    <h3>Search Results</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>座位号</th>
+                <th>预约人</th>
+                <th>开始时间</th>
+                <th>签到状态</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in results %}
+            <tr>
+                <td>{{ result[0] }}</td>
+                <td>{{ result[1] }}</td>
+                <td>{{ result[2] }}</td>
+                <td>{{result[4]}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    <!--取消订阅消息提示部分-->
+    {% if unsubscribe_message %}
+    <div>{{ unsubscribe_message }}</div>
+    {% endif %}
+</body>
+</html>

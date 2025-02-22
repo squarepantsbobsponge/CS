@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>签到页面</title>
+    <style>
+        body {
+            font-family: 'Source Sans Pro', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #52575c;
+            line-height: 1.75em;
+            font-size: 14pt;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-top: 2em;
+        }
+        table {
+            width: 90%;
+            max-width: 1200px;
+            margin: 2em auto;
+            border-collapse: collapse;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        table th {
+            background-color: #f2f2f2;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        a {
+            display: block;
+            text-align: center;
+            margin-top: 2em;
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        a:hover {
+            color: #45a049;
+        }
+        .search-container {
+            margin-bottom: 2em;
+            text-align: center;
+        }
+        .search-container input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .search-container button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .search-container button:hover {
+            background-color: #45a049;
+        }
+        .no-result {
+            text-align: center;
+            color: red;
+            margin-top: 1em;
+        }
+
+        /* 导航栏样式 */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #333;
+            overflow: hidden;
+            padding: 14px 16px;
+            z-index: 1000;
+        }
+        nav a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        nav a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        nav a.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .logout-button {
+            float: right;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .logout-button:hover {
+            background-color: #45a049;
+        }
+
+        /* 弹窗样式 */
+        .flash-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 5px;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav>
+        <a href="{{ url_for('admin_page') }}" class="btn btn-secondary" role="button">管理者页面</a>
+        <a href="{{ url_for('signin') }}" class="btn btn-secondary active" role="button">签到页面</a>
+        <a href="{{ url_for('blacklist') }}" class="btn btn-secondary" role="button">黑名单</a>
+        <button class="logout-button" onclick="window.location.href='{{ url_for('exit_login') }}'">退出登录</button>
+    </nav>
+
+    <h1>签到页面</h1>
+
+    <!-- 搜索功能 -->
+    <div class="search-container">
+        <input type="text" id="searchSid" placeholder="请输入学号">
+        <button onclick="searchBySid()">搜索</button>
+    </div>
+
+    <!-- 显示搜索结果或所有记录 -->
+    <div id="results-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>座位号</th>
+                    <th>预约人</th>
+                    <th>是否签到</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in mock_signin_records %}
+                <tr>
+                    <td>{{ record["id"] }}</td>
+                    <td>{{ record["sid"] }}</td>
+                    <td>{{ "已签到" if record["isSingIn"] == "Y" else "未签到" }}</td>
+                    <td>
+                        <button onclick="signIn('{{ record['id'] }}', '{{ record['sid'] }}')">签到</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 无结果提示 -->
+    <div id="no-result" class="no-result" style="display: none;">无相关预约信息</div>
+
+    <a href="{{ url_for('admin_page') }}" class="btn btn-secondary" role="button">返回管理者页面</a>
+
+    <!-- 弹窗 -->
+    <div class="flash-message" id="flash-message"></div>
+
+    <script>
+        function searchBySid() {
+            const sid = document.getElementById('searchSid').value;
+            const resultsContainer = document.getElementById('results-container');
+            const noResultMessage = document.getElementById('no-result');
+
+            // 清空之前的搜索结果
+            resultsContainer.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>座位号</th>
+                            <th>预约人</th>
+                            <th>是否签到</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="search-results"></tbody>
+                </table>
+            `;
+
+            // 发送搜索请求
+            fetch(`/search_signin?sid=${sid}`)
+                .then(response => response.json())
+                .then(data => {
+                    const searchResults = document.getElementById('search-results');
+
+                    if (data.length > 0) {
+                        // 显示搜索结果
+                        data.forEach(record => {
+                            searchResults.innerHTML += `
+                                <tr>
+                                    <td>${record.id}</td>
+                                    <td>${record.sid}</td>
+                                    <td>${record.isSingIn === "Y" ? "已签到" : "未签到"}</td>
+                                    <td>
+                                        <button onclick="signIn('${record.id}', '${record.sid}')">签到</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        noResultMessage.style.display = 'none';
+                    } else {
+                        // 显示无结果提示
+                        noResultMessage.style.display = 'block';
+                    }
+                });
+        }
+
+        function signIn(id, sid) {
+            // 发送 AJAX 请求到后端
+            fetch('/signin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ id: id, sid: sid })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showFlashMessage('签到成功');
+                    location.reload(); // 刷新页面
+                } else {
+                    showFlashMessage('签到失败');
+                }
+            });
+        }
+
+        function showFlashMessage(message) {
+            const flashMessage = document.getElementById('flash-message');
+            flashMessage.textContent = message;
+            flashMessage.style.display = 'block';
+            setTimeout(() => {
+                flashMessage.style.display = 'none';
+            }, 2000);
+        }
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    showFlashMessage('{{ message }}');
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </script>
+</body>
+</html>
